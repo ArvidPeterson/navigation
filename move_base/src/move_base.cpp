@@ -113,11 +113,14 @@ namespace move_base {
     private_nh.param("shutdown_costmaps", shutdown_costmaps_, false);
     private_nh.param("clearing_rotation_allowed", clearing_rotation_allowed_, true);
     private_nh.param("recovery_behavior_enabled", recovery_behavior_enabled_, true);
-
+    
+    // set initial behaviour to rotate in the direction of the global plan 
+    private_nh.param("initial_rotation", init_rotate_, false);
+    ROS_INFO("initial_rotation: %s", init_rotate_?"true":"false");
     //create the ros wrapper for the planner's costmap... and initializer a pointer we'll use with the underlying map
     planner_costmap_ros_ = new costmap_2d::Costmap2DROS("global_costmap", tf_);
     planner_costmap_ros_->pause();
-
+    
     //initialize the global planner
     try {
       planner_ = bgp_loader_.createInstance(global_planner);
@@ -605,7 +608,7 @@ namespace move_base {
 
         //make sure we only start the controller if we still haven't reached the goal
         if(runPlanner_)
-          state_ = CONTROLLING;
+          state_ = START_NEW_CONTROLLING;
         if(planner_frequency_ <= 0)
           runPlanner_ = false;
         lock.unlock();
@@ -990,6 +993,16 @@ namespace move_base {
           return true;
         }
         break;
+      case START_NEW_CONTROLLING:
+
+        if(!init_rotate_){
+          ROS_INFO("Start execution of new plan, initial rotation set false");
+        }else{
+          ROS_INFO("Start execution of new plan, initial rotation set true");
+        }
+        state_ = CONTROLLING;
+        break;
+        
       default:
         ROS_ERROR("This case should never be reached, something is wrong, aborting");
         resetState();
